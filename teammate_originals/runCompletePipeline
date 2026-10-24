@@ -1,0 +1,82 @@
+function drivableMask = runCompletePipeline(imageFile, options)
+% options is a struct with optional fields:
+%   options.addDivider = true/false
+%   options.dividerPosition = 'center' or a column number
+%   options.cropDashboard = true/false (for dashcam-style images)
+%   options.cropRatio = 0.65 (only used if cropDashboard is true)
+
+close all;
+
+if nargin < 2
+    options = struct();
+end
+if ~isfield(options, 'addDivider'), options.addDivider = false; end
+if ~isfield(options, 'cropDashboard'), options.cropDashboard = false; end
+if ~isfield(options, 'cropRatio'), options.cropRatio = 0.65; end
+
+%% Step 1: Load image
+I = imread(imageFile);
+
+%% Step 2: Optional crop (for dashcam-style images with steering wheel/dashboard)
+if options.cropDashboard
+    [h, ~, ~] = size(I);
+    cropHeight = round(h * options.cropRatio);
+    I = I(1:cropHeight, :, :);
+end
+
+%% Step 3: Static road-surface estimation (catches dividers, footpaths, off-road)
+hsvImg = rgb2hsv(I);
+S = hsvImg(:,:,2);
+V = hsvImg(:,:,3);
+roadSurfaceMask = (S < 0.25) & (V > 0.15) & (V < 0.75);
+roadSurfaceMask = imopen(roadSurfaceMask, strel('disk', 3));
+roadSurfaceMask = imclose(roadSurfaceMask, strel('disk', 5));
+
+%% Step 4: Dynamic object detection (YOLOv8)
+detector = yolov8ObjectDetector("yolov8n");
+[bboxes, labels] = detect(detector, I);
+
+relevantLabels = ["car","truck","bus","person","bicycle","motorcycle","dog","cow","train"];
+if ~isempty(labels)
+    keepIdx = ismember(string(labels), relevantLabels);
+    bboxes = bboxes(keepIdx, :);
+    labels = labels(keepIdx);
+end
+
+detectedImage = insertObjectAnnotation(I, "rectangle", bboxes, labels);
+figure; imshow(detectedImage);
+title("Detected Objects - " + imageFile);
+
+%% Step 5: Combine road-surface + dynamic obstacles into final mask
+drivableMask = double(roadSurfaceMask);
+
+if ~isempty(bboxes)
+    for k = 1:size(bboxes,1)
+        x = max(1, round(bboxes(k,1)));
+        y = max(1, round(bboxes(k,2)));
+        w2 = round(bboxes(k,3));
+        h2 = round(bboxes(k,4));
+        xEnd = min(size(I,2), x+w2);
+        yEnd = min(size(I,1), y+h2);
+        drivableMask(y:yEnd, x:xEnd) = 0;
+    end
+end
+
+%% Step 6: Optional manual divider (for guaranteed demo scenario)
+if options.addDivider
+    [~, w] = size(drivableMask);
+    dividerCol = round(w/2);
+    thickness = max(1, round(w*0.01));
+    drivableMask(:, max(1,dividerCol-thickness):min(w,dividerCol+thickness)) = 0;
+end
+
+%% Step 7: Show final combined mask
+figure;
+imagesc(drivableMask);
+colormap([0.8 0.1 0.1; 0.2 0.7 0.2]);
+set(gca, 'YDir', 'reverse');
+axis equal
+axis([0.5 size(drivableMask,2)+0.5 0.5 size(drivableMask,1)+0.5])
+title("Complete Drivable Mask (road surface + objects" + ...
+    (options.addDivider * " + divider") + ") - " + imageFile);
+end

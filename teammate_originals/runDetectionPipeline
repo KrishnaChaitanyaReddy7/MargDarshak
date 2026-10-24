@@ -1,0 +1,259 @@
+function drivableMask = runDetectionPipeline(imageFile)
+
+close all;
+
+%% Load image
+
+I = imread(imageFile);
+
+H = size(I,1);
+W = size(I,2);
+
+%% Load pretrained YOLOv8 Nano model
+
+detector = yolov8ObjectDetector("yolov8n");
+
+%% Detect objects
+
+[bboxes,~,labels] = detect(detector,I);
+
+% Keep only road-relevant detections
+relevantLabels = ["car","truck","bus","person", ...
+                  "bicycle","motorcycle","dog","cow","train"];
+
+if ~isempty(labels)
+
+    keepIdx = ismember(string(labels),relevantLabels);
+
+    bboxes = bboxes(keepIdx,:);
+    labels = labels(keepIdx);
+
+end
+
+%% Show YOLO detections
+
+detectedImage = insertObjectAnnotation( ...
+    I,"rectangle",bboxes,labels);
+
+figure;
+
+imshow(detectedImage);
+
+title("YOLOv8 Object Detection - " + imageFile);
+
+%% Build drivable mask
+
+drivableMask = ones(H,W);
+
+if ~isempty(bboxes)
+
+    for k = 1:size(bboxes,1)
+
+        x = max(1,round(bboxes(k,1)));
+        y = max(1,round(bboxes(k,2)));
+
+        w = round(bboxes(k,3));
+        h = round(bboxes(k,4));
+
+        xEnd = min(W,x+w);
+        yEnd = min(H,y+h);
+
+        drivableMask(y:yEnd,x:xEnd) = 0;
+
+    end
+
+end
+
+%% Show initial drivable mask
+
+figure;
+
+imshow(drivableMask);
+
+title("Drivable Mask - " + imageFile);
+
+%% =========================================================
+%                    DIVIDER DETECTION
+% ==========================================================
+
+grayImage = rgb2gray(I);
+
+% Search mainly in the left/centre-left part of the road
+
+roi = false(H,W);
+
+roi(round(H*0.20):round(H*0.65), ...
+    1:round(W*0.50)) = true;
+
+%% Edge detection
+
+edges = edge(grayImage,"Canny",[0.08 0.20]);
+
+% Keep only divider-search region
+
+edges = edges & roi;
+
+%% Hough transform
+
+[HoughMatrix,theta,rho] = hough(edges);
+
+peaks = houghpeaks( ...
+    HoughMatrix, ...
+    12, ...
+    "Threshold", ...
+    ceil(0.30*max(HoughMatrix(:))));
+
+lines = houghlines( ...
+    edges, ...
+    theta, ...
+    rho, ...
+    peaks, ...
+    "FillGap",30, ...
+    "MinLength",80);
+
+%% Initialize divider
+
+dividerDetected = false;
+
+dividerMask = false(H,W);
+
+%% Check line candidates
+
+for k = 1:length(lines)
+
+    p1 = lines(k).point1;
+    p2 = lines(k).point2;
+
+    dx = p2(1)-p1(1);
+    dy = p2(2)-p1(2);
+
+    lineLength = hypot(dx,dy);
+
+    angle = abs(atan2d(dy,dx));
+
+    % Normalize angle to 0-90 degrees
+
+    if angle > 90
+
+        angle = 180-angle;
+
+    end
+
+    %% Check line length and angle
+
+    if lineLength > 120 && angle < 25
+
+        % Candidate must be inside the search region
+
+        if max(p1(2),p2(2)) > H*0.20 && ...
+           min(p1(2),p2(2)) < H*0.65
+
+            dividerDetected = true;
+
+            %% Create obstacle around divider line
+
+            x1 = p1(1);
+            y1 = p1(2);
+
+            x2 = p2(1);
+            y2 = p2(2);
+
+            numPoints = max( ...
+                abs(x2-x1), ...
+                abs(y2-y1)) + 1;
+
+            xLine = round( ...
+                linspace(x1,x2,numPoints));
+
+            yLine = round( ...
+                linspace(y1,y2,numPoints));
+
+            %% Make divider thicker
+
+            for j = 1:numPoints
+
+                x = xLine(j);
+                y = yLine(j);
+
+                if x >= 1 && x <= W && ...
+                   y >= 1 && y <= H
+
+                    radius = 10;
+
+                    xMin = max(1,x-radius);
+                    xMax = min(W,x+radius);
+
+                    yMin = max(1,y-radius);
+                    yMax = min(H,y+radius);
+
+                    dividerMask( ...
+                        yMin:yMax, ...
+                        xMin:xMax) = true;
+
+                end
+
+            end
+
+            % First valid divider is enough
+
+            break;
+
+        end
+
+    end
+
+end
+
+%% =========================================================
+%              ADD DIVIDER TO DRIVABLE MASK
+% ==========================================================
+
+if dividerDetected
+
+    fprintf("DIVIDER DETECTED - added as obstacle.\n");
+
+    drivableMask(dividerMask) = 0;
+
+else
+
+    fprintf("NO DIVIDER DETECTED.\n");
+
+end
+
+%% =========================================================
+%                 FINAL DRIVABLE MASK
+% ==========================================================
+
+figure;
+
+imshow(drivableMask);
+
+title("Final Drivable Mask with Obstacles + Divider");
+
+%% =========================================================
+%                 SHOW DIVIDER RESULT
+% ==========================================================
+
+figure;
+
+imshow(I);
+
+hold on;
+
+if dividerDetected
+
+    [yy,xx] = find(dividerMask);
+
+    plot(xx,yy,"r.","MarkerSize",2);
+
+    title("Divider Detected");
+
+else
+
+    title("No Divider Detected");
+
+end
+
+hold off;
+
+end

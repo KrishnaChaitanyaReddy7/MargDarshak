@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SIH 2026 - Unmarked Indian Road Perception & Simulator</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 16px;
+      background: #090d13;
+      color: #e6edf3;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    header {
+      max-width: 1200px;
+      margin: 0 auto 16px auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #30363d;
+      padding-bottom: 12px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      color: #58a6ff;
+    }
+    .badge {
+      font-size: 12px;
+      background: #238636;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+    #status-msg {
+      font-size: 13px;
+      font-family: monospace;
+      color: #8b949e;
+    }
+    #perception-app {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    #test-results {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Autonomous Driving on Unmarked Indian Roads</h1>
+      <div style="font-size: 13px; color: #8b949e; margin-top: 4px;">
+        Smart India Hackathon 2026 | Member C: Perception & Deep Learning Replay
+      </div>
+    </div>
+    <div style="text-align: right;">
+      <span class="badge">Member C Module Active</span>
+      <div id="status-msg">Initializing...</div>
+    </div>
+  </header>
+
+  <main>
+    <div id="perception-app"></div>
+    <div id="test-results"></div>
+  </main>
+
+  <script type="module" src="/src/perception/test_perception.ts"></script>
+</body>
+</html>
