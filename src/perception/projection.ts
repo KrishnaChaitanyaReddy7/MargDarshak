@@ -203,7 +203,18 @@ export function projectRoadPolygon(
     }
   }
 
-  // Ensure polygon is closed or clean
+  // Extend road base to enclose ego origin (y = 0) since front camera field of view
+  // starts at the bumper (y ≈ 1.9m). This provides a continuous drivable corridor for the planner.
+  if (worldPoints.length >= 3) {
+    const nearPoints = worldPoints.filter(p => p.y < 3.5);
+    if (nearPoints.length >= 2) {
+      const minX = Math.min(...nearPoints.map(p => p.x));
+      const maxX = Math.max(...nearPoints.map(p => p.x));
+      worldPoints.push({ x: maxX, y: -1.0 });
+      worldPoints.push({ x: minX, y: -1.0 });
+    }
+  }
+
   return worldPoints;
 }
 

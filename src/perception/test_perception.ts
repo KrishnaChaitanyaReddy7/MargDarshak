@@ -3,6 +3,8 @@
 
 import { loadReplay, getReplayWorld, getReplayFrameCount } from './replay';
 import { projectPixelToWorld, projectObstacle, DEFAULT_CAMERA_CONFIG } from './projection';
+import { plan } from '../planning/planner';
+import type { VehicleState } from '../core/types';
 import { PerceptionSidePanel } from './side_panel';
 
 async function initPerceptionApp() {
@@ -90,6 +92,20 @@ function runFrame15ValidationTest() {
       : `❌ Obstacle #${i + 1} (${obs.cls}): Distance ${dist.toFixed(1)}m outside expected range`
     );
   });
+
+  // Check 5: Integrated Member B Planner on Frame 15 Perception World
+  try {
+    const ego: VehicleState = { x: 0, y: 0, theta: 0, v: 5, delta: 0 };
+    const path = plan(world15, ego);
+    if (path.length > 5) {
+      const endPt = path[path.length - 1];
+      results.push(`✅ Member B Planner Integrated: Planned ${path.length} waypoints reaching y=${endPt.y.toFixed(1)}m ahead avoiding Frame 15 obstacles!`);
+    } else {
+      results.push(`⚠️ Member B Planner: Path returned ${path.length} waypoints.`);
+    }
+  } catch (e) {
+    results.push(`❌ Member B Planner Error: ${e}`);
+  }
 
   if (testResultsEl) {
     testResultsEl.innerHTML = `

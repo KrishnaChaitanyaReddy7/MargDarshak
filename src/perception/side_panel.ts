@@ -3,7 +3,8 @@
 // Shows: Camera -> AI Perception -> Projected World Simulation
 // SIH 2026 Autonomous Car Simulator - Member C
 
-import type { World, Obstacle, Vec2, ObstacleClass } from '../core/types';
+import type { World, Obstacle, Vec2, ObstacleClass, VehicleState } from '../core/types';
+import { plan } from '../planning/planner';
 import {
   type CameraConfig,
   DEFAULT_CAMERA_CONFIG,
@@ -465,6 +466,42 @@ export class PerceptionSidePanel {
         ctx.fill();
         ctx.stroke();
       }
+    }
+
+    // Draw Planned Trajectory from Member B (A* Path Planner)
+    try {
+      const egoState: VehicleState = { x: 0, y: 0, theta: 0, v: 5, delta: 0 };
+      const path = plan(world, egoState);
+      if (path && path.length > 1) {
+        ctx.save();
+        ctx.strokeStyle = '#00f0ff';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = '#00f0ff';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        path.forEach((pt, i) => {
+          const px = toCanvasX(pt.x);
+          const py = toCanvasY(pt.y);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+        ctx.stroke();
+        ctx.restore();
+
+        // Waypoint nodes along the path
+        ctx.fillStyle = '#ffffff';
+        path.forEach((pt, i) => {
+          if (i % 3 === 0) {
+            const px = toCanvasX(pt.x);
+            const py = toCanvasY(pt.y);
+            ctx.beginPath();
+            ctx.arc(px, py, 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        });
+      }
+    } catch {
+      // Graceful fallback if planner cannot find path
     }
 
     // Draw Ego Vehicle at origin (0, 0)
