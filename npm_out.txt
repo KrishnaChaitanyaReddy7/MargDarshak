@@ -1,0 +1,9 @@
+npm verbose cli C:\Program Files\nodejs\node.exe C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js
+npm info using npm@11.11.0
+npm info using node@v24.14.1
+npm verbose title npm install
+npm verbose argv "install" "--loglevel" "verbose"
+npm verbose logfile logs-max:10 dir:C:\Users\vinod\AppData\Local\npm-cache\_logs\2026-10-24T05_09_45_422Z-
+npm verbose logfile C:\Users\vinod\AppData\Local\npm-cache\_logs\2026-10-24T05_09_45_422Z-debug-0.log
+npm http fetch GET https://registry.npmjs.org/three attempt 1 failed with UNABLE_TO_VERIFY_LEAF_SIGNATURE
+npm http fetch GET https://registry.npmjs.org/three attempt 2 failed with UNABLE_TO_VERIFY_LEAF_SIGNATURE
