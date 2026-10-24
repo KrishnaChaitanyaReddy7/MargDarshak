@@ -1,3 +1,40 @@
+<<<<<<< HEAD
 node_modules/
 dist/
 .env
+=======
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Production build outputs
+dist/
+build/
+
+# Heavy RoadRunner & 3D Project Workspace (1.85 GB)
+SIH DEMO/
+
+# Raw Datasets & Tarballs
+idd-lite/
+idd-lite.tar.gz
+training/
+
+# Redundant duplicate frames directory (already tracked in public/replay/frames/)
+Video_Project_1_frames/
+
+# Large model weights (keep repository lightweight & fast to clone)
+*.mat
+yolov8n
+
+# Editor & System
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
+>>>>>>> f2a7871d1e12e3fcc0ada4eb7465a19d47dc69cd

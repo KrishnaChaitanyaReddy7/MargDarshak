@@ -1,0 +1,54 @@
+function smoothPath = planPathFromMask(drivableMask, start, goal)
+map = occupancyMap(1 - drivableMask, 1);
+planner = plannerAStarGrid(map);
+path = plan(planner, start, goal);
+
+figure(99);
+clf;
+imagesc(drivableMask);
+colormap([0.8 0.1 0.1; 0.2 0.7 0.2]);
+set(gca, 'YDir', 'reverse');
+hold on
+axis equal
+axis([0.5 size(drivableMask,2)+0.5 0.5 size(drivableMask,1)+0.5])
+xlabel('Columns');
+ylabel('Rows');
+
+if isempty(path) || size(path,1) < 2 || size(path,2) < 2
+    warning('No usable path found - returning empty result.');
+    smoothPath = [];
+    title('No feasible path found');
+    plot(start(2), start(1), 'bs', 'MarkerSize', 10, 'MarkerFaceColor', 'b');
+    plot(goal(2), goal(1), 'bp', 'MarkerSize', 12, 'MarkerFaceColor', 'y');
+    return;
+end
+
+t = 1:size(path,1);
+tt = linspace(1, size(path,1), 100);
+smoothX = spline(t, path(:,1), tt);
+smoothY = spline(t, path(:,2), tt);
+candidatePath = [smoothY(:), smoothX(:)];
+
+isSafe = true;
+for i = 1:size(candidatePath,1)
+    pt = round(candidatePath(i,:));
+    pt(1) = max(1, min(size(drivableMask,2), pt(1)));
+    pt(2) = max(1, min(size(drivableMask,1), pt(2)));
+    if drivableMask(pt(2), pt(1)) == 0
+        isSafe = false;
+        break;
+    end
+end
+
+if isSafe
+    smoothPath = candidatePath;
+else
+    smoothPath = [path(:,2), path(:,1)];
+    disp('Smoothed path was unsafe - using raw A star path instead');
+end
+
+title('AStar Path');
+plot(smoothPath(:,1), smoothPath(:,2), 'b-', 'LineWidth', 2.5);
+plot(start(2), start(1), 'bs', 'MarkerSize', 10, 'MarkerFaceColor', 'b');
+plot(goal(2), goal(1), 'bp', 'MarkerSize', 12, 'MarkerFaceColor', 'y');
+end
